@@ -5,56 +5,91 @@ pipeline {
   environment {
     DOCKERHUB_NAMESPACE      = "quangnguyenvuminh"
     DOCKERHUB_CREDENTIALS_ID = "dockerhub-creds"
+
     MAVEN_OPTS = '-Dmaven.repo.local=.m2/repository'
+
     SERVICES_TO_BUILD = "customer,cart,order,product,tax,media,search,rating,location,inventory"
+
     JAVA_HOME = tool 'JDK25'
     PATH = "${JAVA_HOME}/bin:${env.PATH}"
+  }
 
-    // Build jar trước để Dockerfile COPY target/*.jar không bị fail
-    MAVEN_CMD = "mvn -B -DskipTests clean package"
-  }
-  
-  tools {
-        maven 'Maven3'
-  }
+  tools { maven 'Maven3' }
 
   stages {
     stage('Checkout') {
       steps {
         checkout scm
-        sh 'git rev-parse --short=12 HEAD'
+        script {
+          env.GIT_SHA = sh(script: "git rev-parse --short=12 HEAD", returnStdout: true).trim()
+          echo "GIT_SHA=${env.GIT_SHA}"
+        }
       }
     }
 
-    stage('Build Services') {
+    stage('Detect changed services vs main') {
       steps {
         script {
-          def svcs = env.SERVICES_TO_BUILD.split(',') as List
-          def pl = svcs.join(',')
+          def allServices = (env.SERVICES_TO_BUILD.split(',') as List)
+            .collect { it.trim() }
+            .findAll { it }
 
-          // -pl: chỉ build các service modules bạn chọn
-          // -am: tự động build các module phụ thuộc cần thiết (vd common-library)
+          def changedFilesRaw = sh(
+            script: "git diff --name-only origin/main...HEAD",
+            returnStdout: true
+          ).trim()
+
+          def changedFiles = changedFilesRaw ? (changedFilesRaw.split('\n') as List) : []
+          echo "Changed files (${changedFiles.size()}):\n${changedFiles.join('\n')}"
+
+          def changedServices = [] as Set
+          changedFiles.each { f ->
+            allServices.each { svc ->
+              if (f.startsWith("${svc}/")) changedServices << svc
+            }
+          }
+
+          def finalServices = (changedServices as List).sort()
+          env.SELECTED_SERVICES = finalServices.join(',')
+
+          if (!env.SELECTED_SERVICES?.trim()) {
+            currentBuild.description = "No service folder changes vs main"
+            echo "No changed service folders detected. Skipping build/push."
+          } else {
+            currentBuild.description = "Services: ${env.SELECTED_SERVICES} | Tag: ${env.GIT_SHA}"
+            echo "Selected services: ${env.SELECTED_SERVICES}"
+          }
+        }
+      }
+    }
+
+    stage('Build selected services') {
+      when { expression { return env.SELECTED_SERVICES?.trim() } }
+      steps {
+        script {
+          def pl = env.SELECTED_SERVICES.split(',') as List
           sh """
             set -euxo pipefail
             java -version
             javac -version
-            mvn -B clean install -pl ${pl} -am -DskipTests
+            mvn -B clean install -pl ${pl.join(',')} -am -DskipTests
           """
         }
       }
     }
 
-    stage('Build Docker images (latest)') {
+    stage('Build Docker images (by commit tag)') {
+      when { expression { return env.SELECTED_SERVICES?.trim() } }
       steps {
         script {
-          def services = ['customer','cart','order','product','tax','media','search','rating','location','inventory']
+          def services = env.SELECTED_SERVICES.split(',') as List
           services.each { svc ->
             dir(svc) {
               sh """
                 set -euxo pipefail
-                echo "=== Docker build: ${svc}:latest ==="
+                echo "=== Docker build: ${svc}:${GIT_SHA} ==="
                 ls -la target || true
-                docker build -t ${DOCKERHUB_NAMESPACE}/${svc}:latest .
+                docker build -t ${DOCKERHUB_NAMESPACE}/${svc}:${GIT_SHA} .
               """
             }
           }
@@ -62,7 +97,8 @@ pipeline {
       }
     }
 
-    stage('Login & Push (latest)') {
+    stage('Login & Push (by commit tag)') {
+      when { expression { return env.SELECTED_SERVICES?.trim() } }
       steps {
         withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS_ID}", usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
           sh """
@@ -72,9 +108,9 @@ pipeline {
         }
 
         script {
-          def services = ['customer','cart','order','product','tax','media','search','rating','location','inventory']
+          def services = env.SELECTED_SERVICES.split(',') as List
           services.each { svc ->
-            sh "set -euxo pipefail; docker push ${DOCKERHUB_NAMESPACE}/${svc}:latest"
+            sh "set -euxo pipefail; docker push ${DOCKERHUB_NAMESPACE}/${svc}:${GIT_SHA}"
           }
         }
       }
