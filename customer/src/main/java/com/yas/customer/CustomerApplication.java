@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @SpringBootApplication(scanBasePackages = {"com.yas.customer", "com.yas.commonlibrary"})
 @EnableConfigurationProperties({ServiceUrlConfig.class, CorsConfig.class})
 public class CustomerApplication {
-
+    //test jenkins
     public static void main(String[] args) {
         SpringApplication.run(CustomerApplication.class, args);
     }
