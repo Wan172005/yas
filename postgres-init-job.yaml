@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-init
+  namespace: postgres
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: psql
+          image: postgres:16
+          env:
+            - name: PGHOST
+              value: yas-postgres
+            - name: PGPORT
+              value: "5432"
+            - name: PGDATABASE
+              value: cart
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: yas.yas-postgres.credentials.postgresql.acid.zalan.do
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: yas.yas-postgres.credentials.postgresql.acid.zalan.do
+                  key: password
+          volumeMounts:
+            - name: sql
+              mountPath: /sql
+          command: ["sh", "-lc"]
+          args:
+            - psql -v ON_ERROR_STOP=1 -f /sql/init.sql
+      volumes:
+        - name: sql
+          configMap:
+            name: postgres-init-sql

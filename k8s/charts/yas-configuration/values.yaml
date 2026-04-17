@@ -1,7 +1,7 @@
 credentials:
   postgresql:
-    username: yasadminuser
-    password: admin
+    username: yas
+    password: qRoTk6stB9xpwYC8A0O2LIRmIqIHSCCrBoxcFRjlM6dkvmCU0hvWsgIl57dVvXWb
   elasticsearch:
     username: yas
     password: LarUmB3A49NTg9YmgW4=
@@ -61,7 +61,7 @@ applicationConfig:
             issuer-uri: http://identity.yas.local.com/realms/Yas
 
     datasource:
-      url:
+      url: jdbc:postgresql://yas-postgres.postgres:5432
       username: ${POSTGRESQL_USERNAME}
       password: ${POSTGRESQL_PASSWORD}
     kafka:

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: yas-postgres-fix
+  namespace: postgres
+spec:
+  selector:
+    application: spilo
+    cluster-name: yas-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
