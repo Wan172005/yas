@@ -35,7 +35,8 @@ public class ProductSyncDataConsumer extends BaseCdcConsumer<ProductMsgKey, Prod
         id = "product-sync-es",
         groupId = "product-sync-search",
         topics = "${product.topic.name}",
-        containerFactory = PRODUCT_CDC_LISTENER_CONTAINER_FACTORY
+        containerFactory = PRODUCT_CDC_LISTENER_CONTAINER_FACTORY,
+        autoStartup = "false"
     )
     @RetrySupportDql(listenerContainerFactory = PRODUCT_CDC_LISTENER_CONTAINER_FACTORY)
     public void processMessage(
