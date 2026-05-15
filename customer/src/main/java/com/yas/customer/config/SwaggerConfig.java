@@ -13,5 +13,9 @@ import io.swagger.v3.oas.annotations.servers.Server;
 @OpenAPIDefinition(info = @Info(title = "Customer Service API", description = "Customer API documentation",
     version = "1.0"),
     servers = {@Server(url = "${server.servlet.context-path}", description = "Default Server URL")})
+@SecurityScheme(name = "oauth2_bearer", type = SecuritySchemeType.OAUTH2,
+    flows = @OAuthFlows(authorizationCode = @OAuthFlow(authorizationUrl
+        = "${springdoc.oauthflow.authorization-url}", tokenUrl = "${springdoc.oauthflow.token-url}", scopes = {
+            @OAuthScope(name = "openid", description = "openid")})))
 public class SwaggerConfig {
 }
