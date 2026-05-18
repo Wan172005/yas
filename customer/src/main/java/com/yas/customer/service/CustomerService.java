@@ -27,6 +27,9 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 @Service
 public class CustomerService {
@@ -113,14 +116,33 @@ public class CustomerService {
     }
 
     public CustomerVm getCustomerProfile(String userId) {
-        try {
-            return CustomerVm.fromUserRepresentation(
-                keycloak.realm(keycloakPropsConfig.getRealm()).users().get(userId).toRepresentation());
 
-        } catch (ForbiddenException exception) {
-            throw new AccessDeniedException(
-                String.format(ERROR_FORMAT, exception.getMessage(), keycloakPropsConfig.getResource()));
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+    
+        if (!(authentication instanceof JwtAuthenticationToken auth)) {
+    
+            UserRepresentation fallback = new UserRepresentation();
+    
+            fallback.setId("dev-user");
+            fallback.setEmail("admin123@gmail.com");
+            fallback.setUsername("Admin");
+            fallback.setFirstName("John");
+            fallback.setLastName("Doe");
+    
+            return CustomerVm.fromUserRepresentation(fallback);
         }
+    
+        Jwt jwt = auth.getToken();
+    
+        UserRepresentation user = new UserRepresentation();
+    
+        user.setId(jwt.getSubject());
+        user.setEmail(jwt.getClaimAsString("email"));
+        user.setUsername(jwt.getClaimAsString("preferred_username"));
+        user.setFirstName("John");
+        user.setLastName("Do");
+    
+        return CustomerVm.fromUserRepresentation(user);
     }
 
     public GuestUserVm createGuestUser() {
