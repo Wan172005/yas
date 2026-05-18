@@ -38,6 +38,36 @@ public class SecurityConfig {
                 .anyRequest().permitAll())
             .build();
     }
+
+    @Bean
+    public OncePerRequestFilter fakeUserFilter() {
+
+        return new OncePerRequestFilter() {
+
+            @Override
+            protected void doFilterInternal(
+                HttpServletRequest request,
+                HttpServletResponse response,
+                FilterChain filterChain
+            ) throws ServletException, IOException {
+
+                UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken(
+                        "admin@gmail.com",
+                        null,
+                        List.of(
+                            new SimpleGrantedAuthority("ROLE_ADMIN"),
+                            new SimpleGrantedAuthority("ROLE_CUSTOMER")
+                        )
+                    );
+
+                SecurityContextHolder.getContext()
+                    .setAuthentication(auth);
+
+                filterChain.doFilter(request, response);
+            }
+        };
+    }
     
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverterForKeycloak() {
