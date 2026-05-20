@@ -1,7 +1,6 @@
 package com.yas.order.service;
 
 import com.yas.commonlibrary.exception.NotFoundException;
-import com.yas.commonlibrary.utils.AuthenticationUtils;
 import com.yas.order.config.ServiceUrlConfig;
 import com.yas.order.viewmodel.order.OrderItemVm;
 import com.yas.order.viewmodel.order.OrderVm;
@@ -30,10 +29,11 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
     private final RestClient restClient;
     private final ServiceUrlConfig serviceUrlConfig;
 
+    private static final String FAKE_TOKEN = "test-token";
+
     @Retry(name = "restApi")
     @CircuitBreaker(name = "restCircuitBreaker", fallbackMethod = "handleProductVariationListFallback")
     public List<ProductVariationVm> getProductVariations(Long productId) {
-        final String jwt = AuthenticationUtils.extractJwt();
 
         final URI url = UriComponentsBuilder
                 .fromUriString(serviceUrlConfig.product())
@@ -43,27 +43,24 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
 
         return restClient.get()
                 .uri(url)
-                .headers(h -> h.setBearerAuth(jwt))
+                .headers(h -> h.setBearerAuth(FAKE_TOKEN))
                 .retrieve()
-                .toEntity(new ParameterizedTypeReference<List<ProductVariationVm>>() {
-                })
+                .toEntity(new ParameterizedTypeReference<List<ProductVariationVm>>() {})
                 .getBody();
     }
 
     @Retry(name = "restApi")
     @CircuitBreaker(name = "restCircuitBreaker", fallbackMethod = "handleBodilessFallback")
     public void subtractProductStockQuantity(OrderVm orderVm) {
-        final String jwt = AuthenticationUtils.extractJwt();
 
         final URI url = UriComponentsBuilder
                 .fromUriString(serviceUrlConfig.product())
                 .path("/backoffice/products/subtract-quantity")
-                .buildAndExpand()
                 .toUri();
 
         restClient.put()
                 .uri(url)
-                .headers(h -> h.setBearerAuth(jwt))
+                .headers(h -> h.setBearerAuth(FAKE_TOKEN))
                 .body(buildProductQuantityItems(orderVm.orderItemVms()))
                 .retrieve();
     }
@@ -71,7 +68,6 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
     @Retry(name = "restApi")
     @CircuitBreaker(name = "restCircuitBreaker", fallbackMethod = "handleProductInfomationFallback")
     public Map<Long, ProductCheckoutListVm> getProductInfomation(Set<Long> ids, int pageNo, int pageSize) {
-        final String jwt = AuthenticationUtils.extractJwt();
 
         final URI url = UriComponentsBuilder
                 .fromUriString(serviceUrlConfig.product())
@@ -79,42 +75,45 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
                 .queryParam("ids", ids)
                 .queryParam("pageNo", pageNo)
                 .queryParam("pageSize", pageSize)
-                .buildAndExpand()
+                .build()
                 .toUri();
 
         ProductGetCheckoutListVm response = restClient.get()
                 .uri(url)
-                .headers(h -> h.setBearerAuth(jwt))
+                .headers(h -> h.setBearerAuth(FAKE_TOKEN))
                 .retrieve()
-                .toEntity(new ParameterizedTypeReference<ProductGetCheckoutListVm>() {
-                })
+                .toEntity(new ParameterizedTypeReference<ProductGetCheckoutListVm>() {})
                 .getBody();
 
         if (response == null || response.productCheckoutListVms() == null) {
             throw new NotFoundException("PRODUCT_NOT_FOUND");
-        } else {
-            return response.productCheckoutListVms()
-                    .stream()
-                    .collect(Collectors.toMap(ProductCheckoutListVm::getId, Function.identity()));
         }
+
+        return response.productCheckoutListVms()
+                .stream()
+                .collect(Collectors.toMap(
+                        ProductCheckoutListVm::getId,
+                        Function.identity()
+                ));
     }
 
     private List<ProductQuantityItem> buildProductQuantityItems(Set<OrderItemVm> orderItems) {
         return orderItems.stream()
-                .map(orderItem
-                        -> ProductQuantityItem
-                        .builder()
-                        .productId(orderItem.productId())
-                        .quantity(Long.valueOf(orderItem.quantity()))
-                        .build()
-                ).toList();
+                .map(orderItem ->
+                        ProductQuantityItem.builder()
+                                .productId(orderItem.productId())
+                                .quantity(Long.valueOf(orderItem.quantity()))
+                                .build())
+                .toList();
     }
 
-    protected List<ProductVariationVm> handleProductVariationListFallback(Throwable throwable) throws Throwable {
+    protected List<ProductVariationVm> handleProductVariationListFallback(Throwable throwable)
+            throws Throwable {
         return handleTypedFallback(throwable);
     }
 
-    protected Map<Long, ProductCheckoutListVm> handleProductInfomationFallback(Throwable throwable) throws Throwable {
+    protected Map<Long, ProductCheckoutListVm> handleProductInfomationFallback(Throwable throwable)
+            throws Throwable {
         return handleTypedFallback(throwable);
     }
 }
