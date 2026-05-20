@@ -32,7 +32,10 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
     private static final String FAKE_TOKEN = "test-token";
 
     @Retry(name = "restApi")
-    @CircuitBreaker(name = "restCircuitBreaker", fallbackMethod = "handleProductVariationListFallback")
+    @CircuitBreaker(
+            name = "restCircuitBreaker",
+            fallbackMethod = "handleProductVariationListFallback"
+    )
     public List<ProductVariationVm> getProductVariations(Long productId) {
 
         final URI url = UriComponentsBuilder
@@ -50,12 +53,16 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
     }
 
     @Retry(name = "restApi")
-    @CircuitBreaker(name = "restCircuitBreaker", fallbackMethod = "handleBodilessFallback")
+    @CircuitBreaker(
+            name = "restCircuitBreaker",
+            fallbackMethod = "handleBodilessFallback"
+    )
     public void subtractProductStockQuantity(OrderVm orderVm) {
 
         final URI url = UriComponentsBuilder
                 .fromUriString(serviceUrlConfig.product())
                 .path("/backoffice/products/subtract-quantity")
+                .build()
                 .toUri();
 
         restClient.put()
@@ -66,8 +73,15 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
     }
 
     @Retry(name = "restApi")
-    @CircuitBreaker(name = "restCircuitBreaker", fallbackMethod = "handleProductInfomationFallback")
-    public Map<Long, ProductCheckoutListVm> getProductInfomation(Set<Long> ids, int pageNo, int pageSize) {
+    @CircuitBreaker(
+            name = "restCircuitBreaker",
+            fallbackMethod = "handleProductInfomationFallback"
+    )
+    public Map<Long, ProductCheckoutListVm> getProductInfomation(
+            Set<Long> ids,
+            int pageNo,
+            int pageSize
+    ) {
 
         final URI url = UriComponentsBuilder
                 .fromUriString(serviceUrlConfig.product())
@@ -97,23 +111,28 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
                 ));
     }
 
-    private List<ProductQuantityItem> buildProductQuantityItems(Set<OrderItemVm> orderItems) {
+    private List<ProductQuantityItem> buildProductQuantityItems(
+            Set<OrderItemVm> orderItems
+    ) {
         return orderItems.stream()
                 .map(orderItem ->
                         ProductQuantityItem.builder()
                                 .productId(orderItem.productId())
                                 .quantity(Long.valueOf(orderItem.quantity()))
-                                .build())
+                                .build()
+                )
                 .toList();
     }
 
-    protected List<ProductVariationVm> handleProductVariationListFallback(Throwable throwable)
-            throws Throwable {
+    protected List<ProductVariationVm> handleProductVariationListFallback(
+            Throwable throwable
+    ) throws Throwable {
         return handleTypedFallback(throwable);
     }
 
-    protected Map<Long, ProductCheckoutListVm> handleProductInfomationFallback(Throwable throwable)
-            throws Throwable {
+    protected Map<Long, ProductCheckoutListVm> handleProductInfomationFallback(
+            Throwable throwable
+    ) throws Throwable {
         return handleTypedFallback(throwable);
     }
 }
