@@ -29,12 +29,13 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
     private final RestClient restClient;
     private final ServiceUrlConfig serviceUrlConfig;
 
+    // fake token để bypass auth
     private static final String FAKE_TOKEN = "test-token";
 
     @Retry(name = "restApi")
     @CircuitBreaker(
-            name = "restCircuitBreaker",
-            fallbackMethod = "handleProductVariationListFallback"
+        name = "restCircuitBreaker",
+        fallbackMethod = "handleProductVariationListFallback"
     )
     public List<ProductVariationVm> getProductVariations(Long productId) {
 
@@ -42,6 +43,7 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
                 .fromUriString(serviceUrlConfig.product())
                 .path("/backoffice/product-variations/{productId}")
                 .buildAndExpand(productId)
+                .build()
                 .toUri();
 
         return restClient.get()
@@ -54,8 +56,8 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
 
     @Retry(name = "restApi")
     @CircuitBreaker(
-            name = "restCircuitBreaker",
-            fallbackMethod = "handleBodilessFallback"
+        name = "restCircuitBreaker",
+        fallbackMethod = "handleBodilessFallback"
     )
     public void subtractProductStockQuantity(OrderVm orderVm) {
 
@@ -74,8 +76,8 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
 
     @Retry(name = "restApi")
     @CircuitBreaker(
-            name = "restCircuitBreaker",
-            fallbackMethod = "handleProductInfomationFallback"
+        name = "restCircuitBreaker",
+        fallbackMethod = "handleProductInfomationFallback"
     )
     public Map<Long, ProductCheckoutListVm> getProductInfomation(
             Set<Long> ids,
@@ -92,12 +94,15 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
                 .build()
                 .toUri();
 
-        ProductGetCheckoutListVm response = restClient.get()
-                .uri(url)
-                .headers(h -> h.setBearerAuth(FAKE_TOKEN))
-                .retrieve()
-                .toEntity(new ParameterizedTypeReference<ProductGetCheckoutListVm>() {})
-                .getBody();
+        ProductGetCheckoutListVm response =
+                restClient.get()
+                        .uri(url)
+                        .headers(h -> h.setBearerAuth(FAKE_TOKEN))
+                        .retrieve()
+                        .toEntity(
+                                new ParameterizedTypeReference<ProductGetCheckoutListVm>() {}
+                        )
+                        .getBody();
 
         if (response == null || response.productCheckoutListVms() == null) {
             throw new NotFoundException("PRODUCT_NOT_FOUND");
