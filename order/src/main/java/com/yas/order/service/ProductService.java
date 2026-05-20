@@ -43,7 +43,6 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
                 .fromUriString(serviceUrlConfig.product())
                 .path("/backoffice/product-variations/{productId}")
                 .buildAndExpand(productId)
-                .build()
                 .toUri();
 
         return restClient.get()
@@ -64,7 +63,7 @@ public class ProductService extends AbstractCircuitBreakFallbackHandler {
         final URI url = UriComponentsBuilder
                 .fromUriString(serviceUrlConfig.product())
                 .path("/backoffice/products/subtract-quantity")
-                .build()
+                .buildAndExpand()
                 .toUri();
 
         restClient.put()
