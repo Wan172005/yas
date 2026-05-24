@@ -9,7 +9,7 @@ pipeline {
     DOCKERHUB_NAMESPACE      = "quangnguyenvuminh"
     DOCKERHUB_CREDENTIALS_ID = "dockerhub-creds"
     MAVEN_OPTS = '-Dmaven.repo.local=.m2/repository'
-    SERVICES_TO_BUILD = "customer,cart,order,product,tax,media,search,rating,location,inventory,backoffice-bff"
+    SERVICES_TO_BUILD = "customer,cart,order,product,tax,media,search,rating,location,inventory,backoffice-bff,storefront"
     JAVA_HOME = tool 'JDK25'
     PATH = "${JAVA_HOME}/bin:${env.PATH}"
   }
